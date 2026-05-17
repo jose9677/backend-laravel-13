@@ -12,13 +12,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
+            $table->unsignedBigInteger('identity')->primary();
+            $table->string('p_a', 255);
+            $table->string('s_a', 255)->nullable();
+            $table->string('p_n', 255);
+            $table->string('s_n', 255)->nullable();
             $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->boolean('active');
+            $table->boolean('email_active');
+            $table->string('otp', 6)->nullable();
+            $table->string('api_token')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
+            
+             $table->foreignId('id_rol')
+              ->constrained('roles', 'id_rol') // Indica la tabla y su llave primaria personalizada
+              ->onUpdate('cascade');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
@@ -29,7 +40,10 @@ return new class extends Migration
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+            // Enlace explícito a la columna identity de usuarios
+            $table->unsignedBigInteger('identity')->nullable()->index();
+            $table->foreign('identity')->references('identity')->on('users')->onDelete('cascade');
+            //$table->foreignId('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');

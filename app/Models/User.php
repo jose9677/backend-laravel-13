@@ -10,11 +10,22 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Str;
 
 #[Fillable(
-    ['name',
-     'email',
-    'password'])
+    [ 'identity',
+        'p_a',
+        's_a',
+        'p_n',
+        's_n',
+        'email',
+        'password',
+        'active',
+        'email_active',
+        'id_rol',
+        'otp',
+        'api_token'
+    ])
 ]
 
 #[Hidden(
@@ -40,4 +51,44 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function register($request)
+    {
+          $user = User::create([
+            'identity' => $request->identity,
+            'p_a' => Str::upper($request->p_a),
+            's_a' => Str::upper($request->s_a),
+            'p_n' => Str::upper($request->p_n),
+            's_n' => Str::upper($request->s_n),
+            'email' => $request->email,
+            'password' => $request->password,
+            'active' => false,
+            'email_active' => false,
+            'id_rol' => $request->id_rol,
+            'otp' => $this->generateOTP()
+        ]);
+
+        return $user;
+    }
+
+    protected function generateOtp()
+    {
+        $lenght = 6;
+
+        $characters = '0123456789';
+
+        $charactersLenght = strlen($characters);
+
+        $randomString = '';
+
+        for ($i = 0; $i < $lenght; $i++) { 
+            $randomString .= $characters[rand(0, $charactersLenght -1)];
+        }
+
+        return $randomString;
+    }
+
+    protected $table = 'users';
+    protected $primaryKey = 'identity';
+    public $incrementing = false;
 }
