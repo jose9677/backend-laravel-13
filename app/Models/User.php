@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Http\Request;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Str;
 
@@ -86,6 +88,39 @@ class User extends Authenticatable
         }
 
         return $randomString;
+    }
+
+    public function refreshOTP(Request $request)
+    {
+            $new_otp = $this->generateCodOtp();
+
+            $query = User::query()->where('identity', $request->identity)->update(['otp' => $new_otp]);
+            $email = User::where('identity', $request->identity)->value('email');
+            
+            return $new_otp;
+    }
+
+    public function validateEmail(Request $request)
+    {
+        $email = User::where('otp', $request->otp)->value('email');
+        User::query()->where('otp', $request->otp)->update(['otp' => null, 'email_active' => true]);
+    }
+
+     public function validateUser(Request $request)
+    {
+        $data = User::query()->where('identity', $request->identity)->first(['email_active', 'otp']);
+        
+        if ($data->email_active == true && empty($data->otp)) {
+            $api_token = Str::random(50);
+            $user = User::query()->where('identity', $request->identity)->update(['api_token' => $api_token]);   
+        }
+        //FALTA LA ACCION EN CASO DE NO CUMPLIR ESTA CONDICION...
+        //PUEDE SER UN METODO DE REINICIAR USUARIO...
+    }
+
+    public function changePassword(Request $request)
+    {
+        $new_pass = User::query()->where('identity', $request->identity)->update(['password' => Hash::make($request->password)]);
     }
 
     protected $table = 'users';

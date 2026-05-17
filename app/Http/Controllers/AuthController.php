@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -61,8 +62,9 @@ class AuthController extends Controller
         $token = $user->createToken('angular_app')->plainTextToken;
 
         DB::commit();
-    } catch (\Throwable $th) {
+    } catch (Exception $e) {
         DB::rollBack();
+        return $e->getMessage();
     }
 
     return response()->json([
@@ -87,6 +89,16 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('identity', $request->identity)->first();
+        
+        if (!$user) {
+            return response()->json(['error' => 'User does not exists in DB', 'code' => '002'], 401);
+        }
+
+        $active = User::where('identity', $request->identity)->value('active');
+        
+        if ($active == false) {
+            return response()->json(['error' => 'Inactive User', 'code' => '003'], 400);
+        }
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -125,5 +137,186 @@ class AuthController extends Controller
         $data = User::all();
 
         return response()->json($data);
+    }
+
+    public function validateEmail(Request $request)
+    {
+        Log::info($request);
+        $validator = Validator::make($request->all(),[
+            'identity' => 'required|min:1|max:8',
+            'otp' => 'required'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->toJson(), 400);
+        }
+
+        $data = User::where([
+            'otp' => $request->otp
+        ])->get();
+
+        if ($data->count()) {
+            try {
+            $user = new User();
+
+            //ENVIAR CORREO DE AVISO DE ACTIVACION...
+            $user->validateEmail($request);
+            return response()->json(['message' => 'Email validated succesfull'], 200);
+            
+            } catch (Exception $e) {
+                return $e->getMessage();
+            }
+        }else {
+            return response()->json(['error', 'Invalid code, please check it again', 'code' => '005'], 400);
+        }
+    }
+
+    public function validateUser(Request $request)
+    {
+        Log::info($request);
+        $validator = Validator::make($request->all(),[
+            'identity' => 'required|min:1|max:8'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->toJson(), 400);
+        }
+
+        $user = User::where([
+            'identity' => $request->identity
+        ])->get();
+    
+        if (!$user->count()) {
+            return response()->json(['error' => 'User does not exists in Data Base', 'code' => '002'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $user = new User();
+            $data = User::where('identity', $request->identity)->first('email', 'api_token');
+            //$app_url = env('APP_URL');
+            $user = $user->validateUser($request);
+            
+            //Mail::to($data->email)->queue(new ValidarMailable($data->api_token, $app_url));
+            DB::commit();
+        } catch (Exception $e) {
+            DB::rollBack();
+            return $e->getMessage();
+        }
+
+        return response()->json(['message' => 'User Validation successfull'], 200);
+    }
+
+    public function changePassword(Request $request)
+    {
+        Log::info($request);
+        $validator = Validator::make($request->all(),[
+            'identity' => 'required|min:1|max:8',
+            'password' => ['required',
+                Password::min(8)
+                        ->letters()
+                        ->mixedCase()
+                        ->numbers()
+        ],
+            //'api_token' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->toJson(), 400);
+        }
+
+        $user = User::where([
+            'identity' => $request->identity
+        ])->get();
+
+        if (!$user->count()) {
+            return response()->json(['error' => 'User does not exists in DB', 'code' => '002'], 400);
+        }
+
+        DB::beginTransaction();
+        try {
+            $user = new User();
+            //$email = User::where('identity', $request->identity)->value('email');
+            $user->changePassword($request);
+
+            //Mail::to($email)->queue(new CambioContraseñaMailable());
+            DB::commit();
+            return response()->json(['message' => 'Password renoved'], 200);
+        } catch (Exception $e) {
+            DB::rollBack();
+            $e->getMessage();
+        }
+    }
+
+    public function activeUser($identity)
+    {
+        $user = User::where([
+            'identity' => $identity
+        ])->get();
+
+        if (!$user->count()) {
+            return response()->json(['error' => 'User does not exists in DB', 'code' => '002'], 400);
+        }
+
+        $data = User::query()->where('identity', $identity)->update(['active' => true]);
+
+        return response()->json(['message' => 'User Actived successfull'], 200);
+    }
+
+    public function desactiveUser($identity)
+    {
+        $user = User::where([
+            'identity' => $identity
+        ])->get();
+
+        if (!$user->count()) {
+            return response()->json(['error' => 'User does not exists in DB', 'code' => '002'], 400);
+        }
+
+        $data = User::query()->where('identity', $identity)->update(['active' => false]);
+
+        return response()->json(['message' => 'User Desactived successfull'], 200);
+    }
+
+    public function refreshOTP(Request $request)
+    {
+        Log::info($request);
+        $validator = Validator::make($request->all(), [
+            'identity' => 'required|min:1|max:8'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json($validator->errors()->toJson(), 400);
+        }
+
+        $user = User::where([
+            'identity' => $request->identity
+        ])->get();
+    
+        if (!$user->count()) {
+            return response()->json(['error' => 'User does not exists in Data Base', 'code' => '002'], 400);
+        }
+
+        $otp = User::where('identity', $request->identity)->value('otp');
+        
+        if (!empty($otp)) {
+            try {
+            $new_otp = new User();
+            
+            //ENVIAR CORREO...
+
+            $new_otp = $new_otp->refreshOTP($request);
+            } catch (Exception $e) {
+                return $e->getMessage();
+            }   
+        }else {
+            return response()->json(['error' => 'This user does not need a OTP', 'code' => '004'], 400);
+        }
+        
+        return response()->json([
+            'message' => 'OTP Updated',
+            'new_otp' => $new_otp,
+            'identity' => $request->identity
+            ], 200);
     }
 }
