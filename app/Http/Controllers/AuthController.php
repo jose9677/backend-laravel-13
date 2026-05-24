@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\RegisterMailable;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -57,9 +59,11 @@ class AuthController extends Controller
         
         $user = new User();
         $user = $user->register($request);
-
+        
         // Generamos el token de una vez para que el usuario quede logueado tras registrarse
         $token = $user->createToken('angular_app')->plainTextToken;
+
+        Mail::to($user->email)->queue(new RegisterMailable());
 
         DB::commit();
     } catch (Exception $e) {
