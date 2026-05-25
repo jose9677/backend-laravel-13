@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Encryption\Encrypter;
 use App\Http\Controllers\Controller;
 use App\Mail\RegisterMailable;
 use App\Models\User;
@@ -109,7 +110,7 @@ class AuthController extends Controller
                 'identity' => ['Las credenciales son incorrectas.'],
             ]);
         }
-
+        
         // Generamos el token. En Sanctum, el token es "texto plano" una sola vez.
         $token = $user->createToken($request->device_name)->plainTextToken;
         
