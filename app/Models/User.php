@@ -54,6 +54,24 @@ class User extends Authenticatable
         ];
     }
 
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class, 'id_rol');
+    }
+
+    public function getAllPermittedActionIds()
+    {
+        $rol_actions = RolAction::where('id_rol', $this->id_rol)
+                                ->pluck('id_action')
+                                ->toArray();
+
+        $user_actions = UserAction::where('identity', $this->identity)
+                                ->pluck('id_action')
+                                ->toArray();
+
+        return array_unique(array_merge($rol_actions, $user_actions));
+    }
+
     public function register($request)
     {
           $user = User::create([

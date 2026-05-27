@@ -5,12 +5,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Rutas protegidas...
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'pass'])->group(function () {
     Route::prefix('auth')->controller(AuthController::class)->group(function (){
         Route::put('active-user/{identity}', 'activeUser');
         Route::put('desactive-user/{identity}', 'desactiveUser');
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/', [AuthController::class, 'detailsUser']);
+        Route::get('/{identity}', [AuthController::class, 'getUserById']);
     });
 });
 

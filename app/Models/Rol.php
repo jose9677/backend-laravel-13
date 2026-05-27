@@ -13,4 +13,5 @@ class Rol extends Model
 
     protected $table = 'roles';
     protected $primaryKey = 'id_rol';
+    public $incrementing = false;
 }

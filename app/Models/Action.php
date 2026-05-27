@@ -18,4 +18,5 @@ class Action extends Model
 
     protected $table = 'actions';
     protected $primaryKey = 'id_action';
+    public $incrementing = false;
 }

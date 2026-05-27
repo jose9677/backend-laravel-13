@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\RolAction;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -22,6 +23,9 @@ class DatabaseSeeder extends Seeder
             'email' => 'test@example.com',
         ]); */
 
-        $this->call(RolesSeeder::class);
+        //$this->call(RolesSeeder::class);
+        //$this->call(ModuleSedder::class);
+        //$this->call(ActionSedder::class);
+        $this->call(RolActionSedder::class);
     }
 }

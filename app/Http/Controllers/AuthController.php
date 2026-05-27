@@ -144,6 +144,13 @@ class AuthController extends Controller
         return response()->json($data);
     }
 
+    public function getUserById($identity)
+    {
+        $data = User::findOrFail($identity);
+
+        return response()->json($data);
+    }
+
     public function validateEmail(Request $request)
     {
         Log::info($request);
